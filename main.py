@@ -21,7 +21,7 @@ def crear_tabla():
         )
     """)
 
-    conn.commit()
+    conn.commit() 
     conn.close()
 
 
@@ -183,46 +183,6 @@ def login(usuario, password):
     }
 
 
-def cargar_productos():
-    productos = []
-
-    with open("productos.csv", newline="", encoding="utf-8") as archivo:
-        lector = csv.reader(archivo)
-        next(lector)  # saltar encabezado
-
-        for fila in lector:
-            if len(fila) < 5:
-                continue
-
-            codigo, nombre, talla, precio, stock = fila
-
-            productos.append({
-                "codigo": codigo,
-                "nombre": nombre,
-                "talla": talla,
-                "precio": int(precio),
-                "stock": int(stock)
-            })
-
-    return productos
-
-def guardar_productos(productos):
-    with open("productos.csv", "w", newline="", encoding="utf-8") as archivo:
-        escritor = csv.writer(archivo)
-
-        # encabezado
-        escritor.writerow(["codigo", "nombre", "talla", "precio", "stock"])
-
-        for producto in productos:
-            escritor.writerow([
-                producto["codigo"],
-                producto["nombre"],
-                producto["talla"],
-                producto["precio"],
-                producto["stock"]
-            ])
-
-
 def calcular_valor_total(inventario):
     total = 0
 
@@ -241,27 +201,6 @@ def vender_producto(inventario):
     resultado = vender_producto_por_codigo_bd(codigo)
     print(resultado["mensaje"])
 
-
-def vender_producto_por_codigo(inventario, codigo):
-    for producto in inventario:
-        if producto["codigo"] == codigo:
-            if producto["stock"] > 0:
-                producto["stock"] -= 1
-                guardar_productos(inventario)
-                return {
-                    "ok": True,
-                    "mensaje": f"Se vendió 1 unidad de {producto['nombre']}"
-                }
-            else:
-                return {
-                    "ok": False,
-                    "mensaje": "No hay stock disponible"
-                }
-
-    return {
-        "ok": False,
-        "mensaje": "Producto no encontrado"
-    }
 
 
 def procesar_opcion(opcion, inventario, usuario_actual):
@@ -395,7 +334,8 @@ def main():
             break
 
 if __name__ == "__main__":
-    #main()
-    ver_tabla("ventas")
+    main()
+    #ver_tabla("ventas")
     #ver_tabla("usuarios")
+    #crear_usuario("stewart", "123", "vendedor")
 
