@@ -1,11 +1,7 @@
-import csv
-import sqlite3
+from db  import obtener_conexion
 from seguridad import hash_password
 from datetime import datetime
 
-
-def obtener_conexion():
-    return sqlite3.connect("inventario.db")
 
 def crear_tabla():
     conn = obtener_conexion()
@@ -61,7 +57,7 @@ def cargar_productos_desde_bd():
     return productos
 
 
-def vender_producto_por_codigo_bd(codigo):
+def vender_producto_por_codigo_bd(codigo, usuario):
     conn = obtener_conexion()
     cursor = conn.cursor()
 
@@ -84,6 +80,13 @@ def vender_producto_por_codigo_bd(codigo):
     cursor.execute(
         "UPDATE productos SET stock = stock - 1 WHERE codigo = ?",
         (codigo,)
+    )
+
+    fecha = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    cursor.execute(
+        "INSERT INTO ventas (usuario, codigo_producto, cantidad, fecha) VALUES (?, ?, ?, ?)",
+        (usuario, codigo, 1, fecha)
     )
 
     conn.commit()
@@ -145,7 +148,7 @@ def crear_tabla_ventas():
 
     from datetime import datetime
 
-def registrar_venta(usuario, codigo_producto, cantidad):
+def registrar_venta(usuario, codigo, cantidad):
     conn = obtener_conexion()
     cursor = conn.cursor()
 
@@ -153,9 +156,8 @@ def registrar_venta(usuario, codigo_producto, cantidad):
 
     cursor.execute(
         "INSERT INTO ventas (usuario, codigo_producto, cantidad, fecha) VALUES (?, ?, ?, ?)",
-        (usuario, codigo_producto, cantidad, fecha)
+        (usuario, codigo, cantidad, fecha)
     )
-
     conn.commit()
     conn.close()
 
@@ -196,20 +198,60 @@ def mostrar_valor_total(inventario):
     print(f"Valor total del inventario: ${total}")
     
 
-def vender_producto(inventario):
+def vender_producto(usuario_actual):
     codigo = input("Ingresa el código del producto a vender: ")
-    resultado = vender_producto_por_codigo_bd(codigo)
+    resultado = vender_producto_por_codigo_bd(codigo, usuario_actual["usuario"])
+    print(resultado["mensaje"])
+
+def agregar_stock(codigo, cantidad):
+    conn = obtener_conexion()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "SELECT stock FROM productos WHERE codigo = ?",
+        (codigo,)
+    )
+    resultado = cursor.fetchone()
+
+    if not resultado:
+        conn.close()
+        return {"ok": False, "mensaje": "Producto no encontrado"}
+
+    cursor.execute(
+        "UPDATE productos SET stock = stock + ? WHERE codigo = ?",
+        (cantidad, codigo)
+    )
+
+    conn.commit()
+    conn.close()
+
+    return {"ok": True, "mensaje": f"Stock aumentado en {cantidad} unidades"}
+
+def agregar_stock_interactivo():
+    codigo = input("Código del producto: ")
+    try:
+        cantidad = int(input("Cantidad a agregar: "))
+    except ValueError:
+        print("Cantidad inválida")
+        return
+
+    if cantidad <= 0:
+        print("La cantidad debe ser mayor que cero")
+        return
+
+    resultado = agregar_stock(codigo, cantidad)
     print(resultado["mensaje"])
 
 
-
-def procesar_opcion(opcion, inventario, usuario_actual):
+def procesar_opcion(opcion, usuario_actual):
     if opcion == "1":
         print("\nInventario:")
+        inventario = cargar_productos_desde_bd()
         for producto in inventario:
             print(f'{producto["nombre"]} - Stock: {producto["stock"]}')
 
     elif opcion == "2":
+        inventario = cargar_productos_desde_bd()
         mostrar_valor_total(inventario)
 
     elif opcion == "3":
@@ -217,7 +259,7 @@ def procesar_opcion(opcion, inventario, usuario_actual):
             print("No tienes permiso para vender productos")
             return True
         
-        vender_producto(inventario)
+        vender_producto(usuario_actual)
 
     elif opcion == "4":
         print("Saliendo del sistema...")
@@ -324,18 +366,20 @@ def main():
 
 
     inventario = cargar_productos_desde_bd()
+    print(usuario)
 
     while True:
         mostrar_menu(usuario_actual["rol"])
         opcion = input("Elige una opción: ")
 
-        continuar = procesar_opcion(opcion, inventario, usuario_actual)
+        continuar = procesar_opcion(opcion, usuario_actual)
         if not continuar:
             break
 
 if __name__ == "__main__":
-    main()
-    #ver_tabla("ventas")
+    #main()
+    #agregar_stock_interactivo()
+    ver_tabla("ventas")
     #ver_tabla("usuarios")
-    #crear_usuario("stewart", "123", "vendedor")
+    #crear_usuario("stewart", "123", "vendedor)
 
